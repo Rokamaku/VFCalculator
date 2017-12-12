@@ -1,6 +1,8 @@
 package VFCalculator;
 
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -50,6 +52,12 @@ public class MainUIController {
     private int attrNum;
     private int appNum;
     private int siteNum;
+
+    private final int DISTANCE_BETWEEN_COLUMN_AND_ROW = 1;
+    private final int DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY = 1;
+    private final int ROW_HEADER = 0;
+    private final int TOP_ATTRIBUTE = 1;
+    private final int BOT_ATTRIBUTE = 2;
 
     private Boolean[] PKFlag = new Boolean[10];
 
@@ -103,22 +111,38 @@ public class MainUIController {
         table.getColumns().clear();
         table.getItems().clear();
 
+        //edit table cell on focus
+        table.getFocusModel().focusedCellProperty().addListener(
+                (ObservableValue<? extends TablePosition> observable, TablePosition oldValue, TablePosition newValue ) ->
+                {
+                    if ( newValue != null )
+                    {
+                        Platform.runLater( () ->
+                        {
+                            table.edit( newValue.getRow(), newValue.getTableColumn() );
+                        } );
+                    }
+                }
+        );
 
+
+        //create list of row with empty data
         for (int i = 0; i < appNum; i++) {
             ObservableList<String> aRow = FXCollections.observableArrayList();
-            aRow.add("Q" + Integer.toString(i + 1));
-            for (int j = 1; j < colNum + 1; j++) {
+            //add row header
+            aRow.add("Q" + Integer.toString(i + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY));
+            for (int j = 1; j < colNum + DISTANCE_BETWEEN_COLUMN_AND_ROW; j++) {
                 aRow.add("");
             }
             matrix.add(aRow);
         }
 
-
+        //create column and bind row index to corresponding column
         TableColumn<ObservableList<String>, String> col0 = new TableColumn<>();
-        col0.setCellValueFactory(col -> new SimpleStringProperty(col.getValue().get(0)));
+        col0.setCellValueFactory(col -> new SimpleStringProperty(col.getValue().get(ROW_HEADER)));
         col0.setPrefWidth(60);
         table.getColumns().add(col0);
-        for (int i = 1; i < colNum + 1; i++) {
+        for (int i = 1; i < colNum + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY; i++) {
             String colHeaderName = headerPrefix + Integer.toString(i);
             TableColumn<ObservableList<String>, String> col = new TableColumn<>(colHeaderName);
             col.setPrefWidth(60);
@@ -145,47 +169,54 @@ public class MainUIController {
         progTextArea.clear();
         VFTextArea.clear();
 
+        List<Integer> PKs = determinePKs();
+        if (PKs == null)
+            return;
+
         calculateAAMatrix();
         List<Integer> attrOrders = calculateCAMatrix();
-        calculateVF(attrOrders);
+        calculateVF(attrOrders, PKs);
     }
 
-    private void calculateVF(List<Integer> attrOrders) {
+
+    private void calculateVF(List<Integer> attrOrders, List<Integer> PKs) {
         progTextArea.appendText("\n********Calculate Vertical Fragment********\n");
         int XPos = determineX(attrOrders);
-        List<Integer> PKs = determinePKs(XPos);
-        showFragment(createAFragment(XPos, PKs, attrOrders, 1));
-        showFragment(createAFragment(XPos, PKs, attrOrders, 2));
+        showFragment(createAFragment(XPos, PKs, attrOrders, TOP_ATTRIBUTE));
+        showFragment(createAFragment(XPos, PKs, attrOrders, BOT_ATTRIBUTE));
     }
 
     private void showFragment(Set<Integer> aFragment) {
         VFTextArea.appendText("[");
         List<Integer> aFragmentList = new ArrayList<>(aFragment);
         for (int i = 0; i < aFragmentList.size() - 1; i++) {
-            VFTextArea.appendText("A" + (aFragmentList.get(i) + 1) + ",");
+            VFTextArea.appendText("A" + (aFragmentList.get(i) + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + ",");
         }
-        VFTextArea.appendText("A" + (aFragmentList.get(aFragment.size() - 1) + 1) + "]\n");
+        VFTextArea.appendText("A" + (aFragmentList.get(aFragment.size() - 1)
+                + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + "]\n");
     }
 
     private Set<Integer> createAFragment(int xPos, List<Integer> pKs, List<Integer> attrOrders, int mode) {
         Set<Integer> aFragment = new HashSet<>();
         aFragment.addAll(pKs);
-        if (mode == 1) {
+        if (mode == TOP_ATTRIBUTE) {
             aFragment.addAll(attrOrders.subList(0, xPos));
-        } else if (mode == 2) {
+        } else if (mode == BOT_ATTRIBUTE) {
             aFragment.addAll(attrOrders.subList(xPos, attrOrders.size()));
         }
         return aFragment;
     }
 
-    private List<Integer> determinePKs(int XPos) {
+    private List<Integer> determinePKs() {
         List<Integer> PKs = new ArrayList<>();
-        for (int i = 0; i < PKFlag.length; i++) {
-            if (PKFlag[i])
-                PKs.add(i);
+        for (int currFlag = 0; currFlag < PKFlag.length; currFlag++) {
+            if (PKFlag[currFlag])
+                PKs.add(currFlag);
         }
-        if (PKs.size() == 0)
+        if (PKs.size() == 0) {
             showMessageError("You must add Primary key");
+            return null;
+        }
         return PKs;
     }
 
@@ -204,6 +235,7 @@ public class MainUIController {
 
         progTextArea.appendText("Z = " + maxZ + "\n");
 
+        //top attribute must not empty
         for (int splitter = 2; splitter < attrOrders.size(); splitter++) {
             int Z = calculateZ(attrOrders, splitter);
 
@@ -223,27 +255,33 @@ public class MainUIController {
     private void showXPartition(List<Integer> attrOrders, int maxZPos) {
         progTextArea.appendText("Best Partition: {");
         for (int i = 0; i < maxZPos - 1; i++) {
-            progTextArea.appendText("A" + (attrOrders.get(i) + 1) + ",");
+            progTextArea.appendText("A" + (attrOrders.get(i)
+                    + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + ",");
         }
-        progTextArea.appendText("A" + (attrOrders.get(maxZPos - 1) + 1) + "} {");
+        progTextArea.appendText("A" + (attrOrders.get(maxZPos - 1)
+                + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + "} {");
 
         for (int i = maxZPos; i < attrOrders.size() - 1; i++)  {
-            progTextArea.appendText("A" + (attrOrders.get(i) + 1) + ",");
+            progTextArea.appendText("A" + (attrOrders.get(i)
+                    + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + ",");
         }
-        progTextArea.appendText("A" + (attrOrders.get(attrOrders.size() - 1) + 1) + "}\n");
+        progTextArea.appendText("A" + (attrOrders.get(attrOrders.size() - 1)
+                + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + "}\n");
     }
 
     private void showCurrentPartition(List<Integer> topAttr, List<Integer> botAttr) {
         progTextArea.appendText("Partition: {");
         for (int i = 0; i < topAttr.size() - 1; i++) {
-            progTextArea.appendText("A" + (topAttr.get(i) + 1) + ",");
+            progTextArea.appendText("A" + (topAttr.get(i) + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + ",");
         }
-        progTextArea.appendText("A" + (topAttr.get(topAttr.size() - 1) + 1) + "} {");
+        progTextArea.appendText("A" + (topAttr.get(topAttr.size() - 1)
+                + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + "} {");
 
         for (int i = 0; i < botAttr.size() - 1; i++)  {
-            progTextArea.appendText("A" + (botAttr.get(i) + 1) + ",");
+            progTextArea.appendText("A" + (botAttr.get(i) + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + ",");
         }
-        progTextArea.appendText("A" + (botAttr.get(botAttr.size() - 1) + 1) + "}:\n");
+        progTextArea.appendText("A" + (botAttr.get(botAttr.size() - 1) +
+                DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + "}:\n");
     }
 
     private int calculateZ(List<Integer> attrOrders, int splitter) {
@@ -252,9 +290,9 @@ public class MainUIController {
 
         showCurrentPartition(topAttr, botAttr);
 
-        List<Integer> TQAccess = findTOrBQueryAccess(topAttr);
-        List<Integer> BQAccess = findTOrBQueryAccess(botAttr);
-        List<Integer> OQAccess = findBothQueryAccess(TQAccess, BQAccess, attrOrders);
+        List<Integer> TQAccess = findTOrBQQueryAccess(topAttr);
+        List<Integer> BQAccess = findTOrBQQueryAccess(botAttr);
+        List<Integer> OQAccess = findBothQueryAccess(TQAccess, BQAccess);
 
         int CTQ = getTotalTimeQueryAccessPartitionAttr(TQAccess);
         int CBQ = getTotalTimeQueryAccessPartitionAttr(BQAccess);
@@ -276,7 +314,7 @@ public class MainUIController {
         return sum;
     }
 
-    private List<Integer> findBothQueryAccess(List<Integer> TQAccess, List<Integer> BQAccess, List<Integer> attrOrders) {
+    private List<Integer> findBothQueryAccess(List<Integer> TQAccess, List<Integer> BQAccess) {
         List<Integer> TBQueryAccess = new ArrayList<>();
         TBQueryAccess.addAll(TQAccess);
         TBQueryAccess.addAll(BQAccess);
@@ -289,14 +327,14 @@ public class MainUIController {
         return OQAccess;
     }
 
-    private List<Integer> findTOrBQueryAccess(List<Integer> attrs) {
+    private List<Integer> findTOrBQQueryAccess(List<Integer> attrs) {
         List<Integer> queriesAccess = new ArrayList<>();
         for (int row = 0; row < usageMatrix.size(); row++) {
             List<String> aRow = usageMatrix.get(row);
             List<Integer> tmp = new ArrayList<>();
             for (int col = 1; col < aRow.size(); col++) {
                 if (aRow.get(col).equals("1"))
-                    tmp.add(col - 1);
+                    tmp.add(col - DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY);
             }
             if (tmp.size() == attrs.size() & tmp.containsAll(attrs))
                 queriesAccess.add(row);
@@ -320,7 +358,8 @@ public class MainUIController {
         CATable.getColumns().add(col0);
         for (int i = 1; i <= attrNum; i++) {
             final int idx = i;
-            String colHeaderName = "A" + Integer.toString(attrOrders.get(i - 1) + 1);
+            String colHeaderName = "A" + Integer.toString(attrOrders
+                    .get(i - DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + DISTANCE_BETWEEN_COLUMN_AND_ROW);
             TableColumn<ObservableList<String>, String> col = new TableColumn<>(colHeaderName);
             col.setPrefWidth(60);
             col.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().get(idx)));
@@ -363,14 +402,14 @@ public class MainUIController {
     private int determineBestPos2Add(List<Integer> attrOrders, int colInsert) {
         int maxContVal = 0;
         int maxContPos = 0;
-        for (int i = 0; i <= attrOrders.size(); i++) {
-            int contVal = calculateCont(attrOrders, colInsert, i);
+        for (int currAttr = 0; currAttr <= attrOrders.size(); currAttr++) {
+            int contVal = calculateCont(attrOrders, colInsert, currAttr);
 
-            showCAContProgress(attrOrders, colInsert, i, contVal);
+            showCAContProgress(attrOrders, colInsert, currAttr, contVal);
 
             if (contVal > maxContVal) {
                 maxContVal = contVal;
-                maxContPos = i;
+                maxContPos = currAttr;
             }
         }
         return maxContPos;
@@ -384,26 +423,30 @@ public class MainUIController {
         progTextArea.appendText("A" + Integer.toString(attrOrders.get(attrOrders.size() - 1) + 1) + "\n");
     }
 
-    private void showCAContProgress(List<Integer> attrOrders, int colInsert, int i, int contVal) {
+    private void showCAContProgress(List<Integer> attrOrders, int colInsert, int currAttr, int contVal) {
         progTextArea.appendText("+ cont(");
-        if (i == 0)
+        if (currAttr == 0)
             progTextArea.appendText("_");
         else
-            progTextArea.appendText("A" + Integer.toString(attrOrders.get(i - 1)));
+            progTextArea.appendText("A" + Integer.toString(attrOrders.get(currAttr - 1)
+                    + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY));
 
         progTextArea.appendText(" - A" + Integer.toString(colInsert + 1) + " - ");
 
-        if (i + 1 > attrOrders.size())
+        if (currAttr + 1 > attrOrders.size())
             progTextArea.appendText("_) = " + Integer.toString(contVal) + "\n");
         else
-            progTextArea.appendText("A" + Integer.toString(attrOrders.get(i)) + ") = " + Integer.toString(contVal) + "\n") ;
+            progTextArea.appendText("A" + Integer.toString(attrOrders.get(currAttr)
+                    + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + ") = " + Integer.toString(contVal) + "\n") ;
     }
 
     private int calculateCont(List<Integer> attrOrders, int colInsert, int beforePos) {
         if (beforePos == 0)
             return 2 * calculateBond(colInsert, attrOrders.get(beforePos));
+
         if (beforePos == attrOrders.size())
             return 2 * calculateBond(attrOrders.get(beforePos - 1), colInsert);
+
         return 2 * calculateBond(attrOrders.get(beforePos - 1), colInsert)
                 + 2 * calculateBond(colInsert, attrOrders.get(beforePos))
                 - 2 * calculateBond(attrOrders.get(beforePos - 1), attrOrders.get(beforePos));
@@ -442,14 +485,14 @@ public class MainUIController {
 
         for (int row = 0; row < attrNum; row++) {
             ObservableList<String> aRow = aaMatrix.get(row);
-            int rowInCol = row + 1;
+            int rowInCol = row + DISTANCE_BETWEEN_COLUMN_AND_ROW;
             aRow.set(0,"A" + Integer.toString(rowInCol));
             for (int col = rowInCol; col <= attrNum; col++) {
                 List<Integer> affinityQueries = getAffinityQueries(rowInCol, col);
                 progTextArea.appendText("AA[" + rowInCol + "][" + col + "] = AA[" + col + "][" + rowInCol + "] = ");
                 int sum = getTotalTimesQueryAccessAffinityAttr(affinityQueries);
                 aRow.set(col, Integer.toString(sum));
-                aaMatrix.get(col - 1).set(rowInCol, Integer.toString(sum));
+                aaMatrix.get(col - DISTANCE_BETWEEN_COLUMN_AND_ROW).set(rowInCol, Integer.toString(sum));
             }
         }
     }

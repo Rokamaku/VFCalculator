@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.collections.*?>
+<?import javafx.scene.*?>
+<?import javafx.collections.FXCollections?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.Group?>
+<?import javafx.scene.layout.*?>
+<?import java.lang.*?>
+
+<HBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="1200.0" stylesheets="@MainUIStyle.css" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="VFCalculator.MainUIController">
+   <children>
+      <VBox prefHeight="750.0" prefWidth="400.0">
+         <children>
+            <Group>
+               <children>
+                  <VBox prefWidth="400.0">
+                     <children>
+                        <Label text="General parameters" />
+                        <GridPane>
+                          <columnConstraints>
+                            <ColumnConstraints hgrow="SOMETIMES" minWidth="150.0" prefWidth="180.0" />
+                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                          </columnConstraints>
+                          <rowConstraints>
+                            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                          </rowConstraints>
+                           <children>
+                              <Label text="Number of attributes:" />
+                              <ComboBox fx:id="attrNumBox" onAction="#handleAttrChangeVal" prefWidth="150.0" GridPane.columnIndex="1">
+                                 <items>
+                                    <FXCollections fx:factory="observableArrayList">
+                                       <Integer fx:value="2" />
+                                       <Integer fx:value="3" />
+                                       <Integer fx:value="4" />
+                                       <Integer fx:value="5" />
+                                       <Integer fx:value="6" />
+                                       <Integer fx:value="7" />
+                                       <Integer fx:value="8" />
+                                       <Integer fx:value="9" />
+                                       <Integer fx:value="10" />
+                                    </FXCollections>
+                                 </items>
+                              </ComboBox>
+                              <Label text="Number of applications:" GridPane.rowIndex="1" />
+                              <ComboBox fx:id="appNumBox" onAction="#handleAppChangeVal" prefWidth="150.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                                 <items>
+                                    <FXCollections fx:factory="observableArrayList">
+                                       <Integer fx:value="2" />
+                                       <Integer fx:value="3" />
+                                       <Integer fx:value="4" />
+                                       <Integer fx:value="5" />
+                                       <Integer fx:value="6" />
+                                       <Integer fx:value="7" />
+                                       <Integer fx:value="8" />
+                                       <Integer fx:value="9" />
+                                       <Integer fx:value="10" />
+                                    </FXCollections>
+                                 </items>
+                              </ComboBox>
+                              <Label text="Number of sites:" GridPane.rowIndex="2" />
+                              <ComboBox fx:id="siteNumBox" onAction="#handleSiteChangeVal" prefWidth="150.0" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                                 <items>
+                                    <FXCollections fx:factory="observableArrayList">
+                                       <Integer fx:value="2" />
+                                       <Integer fx:value="3" />
+                                       <Integer fx:value="4" />
+                                       <Integer fx:value="5" />
+                                       <Integer fx:value="6" />
+                                       <Integer fx:value="7" />
+                                       <Integer fx:value="8" />
+                                       <Integer fx:value="9" />
+                                       <Integer fx:value="10" />
+                                    </FXCollections>
+                                 </items>
+                              </ComboBox>
+                           </children>
+                           <VBox.margin>
+                              <Insets bottom="10.0" top="10.0" />
+                           </VBox.margin>
+                        </GridPane>
+                     </children>
+                  </VBox>
+               </children>
+            </Group>
+            <Label text="Determine Primary Key">
+               <VBox.margin>
+                  <Insets bottom="5.0" top="10.0" />
+               </VBox.margin>
+            </Label>
+            <FlowPane fx:id="PKFlowPane" prefHeight="100.0" prefWidth="400.0" />
+            <Label text="Attribute Usage matrix (USE)">
+               <VBox.margin>
+                  <Insets bottom="5.0" top="10.0" />
+               </VBox.margin>
+            </Label>
+            <TableView fx:id="UMTable" prefHeight="250.0" prefWidth="400.0" />
+            <Label text="Access frequency matrix (ACC)">
+               <VBox.margin>
+                  <Insets bottom="5.0" top="10.0" />
+               </VBox.margin>
+            </Label>
+            <TableView fx:id="AMTable" prefHeight="250.0" prefWidth="200.0" />
+            <HBox prefHeight="100.0" prefWidth="200.0">
+               <children>
+                  <Button mnemonicParsing="false" onAction="#handleCalculate" prefHeight="30.0" prefWidth="120.0" text="Calculate">
+                     <HBox.margin>
+                        <Insets bottom="20.0" left="40.0" right="20.0" top="30.0" />
+                     </HBox.margin>
+                  </Button>
+                  <Button mnemonicParsing="false" onAction="#handleClose" prefHeight="30.0" prefWidth="120.0" text="Close">
+                     <HBox.margin>
+                        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
+                     </HBox.margin>
+                  </Button>
+               </children>
+            </HBox>
+         </children>
+         <HBox.margin>
+            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+         </HBox.margin>
+      </VBox>
+      <VBox prefHeight="750.0" prefWidth="800.0">
+         <children>
+            <HBox prefHeight="250.0" prefWidth="600.0">
+               <children>
+                  <VBox prefHeight="250.0" prefWidth="400.0">
+                     <children>
+                        <Label text="Attribute Affinity Matrix (AA)">
+                           <VBox.margin>
+                              <Insets bottom="5.0" />
+                           </VBox.margin>
+                        </Label>
+                        <TableView fx:id="AATable" prefHeight="400.0" prefWidth="200.0">
+                           <VBox.margin>
+                              <Insets />
+                           </VBox.margin>
+                        </TableView>
+                     </children>
+                     <HBox.margin>
+                        <Insets left="5.0" right="5.0" />
+                     </HBox.margin>
+                  </VBox>
+                  <VBox prefHeight="250.0" prefWidth="400.0">
+                     <children>
+                        <Label text="Cluster Affinity matrix (CA)">
+                           <VBox.margin>
+                              <Insets bottom="5.0" />
+                           </VBox.margin>
+                        </Label>
+                        <TableView fx:id="CATable" prefHeight="250.0" prefWidth="200.0">
+                           <VBox.margin>
+                              <Insets />
+                           </VBox.margin>
+                        </TableView>
+                     </children>
+                     <HBox.margin>
+                        <Insets left="5.0" right="5.0" />
+                     </HBox.margin>
+                  </VBox>
+               </children>
+            </HBox>
+            <Label text="Vertical Fragment">
+               <VBox.margin>
+                  <Insets bottom="5.0" left="5.0" top="10.0" />
+               </VBox.margin>
+            </Label>
+            <TextArea fx:id="VFTextArea" prefHeight="100.0" prefWidth="800.0">
+               <VBox.margin>
+                  <Insets left="5.0" right="5.0" />
+               </VBox.margin>
+            </TextArea>
+            <Label text="Progess">
+               <VBox.margin>
+                  <Insets bottom="5.0" top="10.0" />
+               </VBox.margin>
+            </Label>
+            <TextArea fx:id="progTextArea" prefHeight="350.0" prefWidth="800.0">
+               <VBox.margin>
+                  <Insets left="5.0" right="5.0" />
+               </VBox.margin></TextArea>
+         </children>
+         <HBox.margin>
+            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+         </HBox.margin>
+      </VBox>
+   </children>
+</HBox>
