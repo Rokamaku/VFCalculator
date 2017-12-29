@@ -33,7 +33,6 @@
                               <ComboBox fx:id="attrNumBox" onAction="#handleAttrChangeVal" prefWidth="150.0" GridPane.columnIndex="1">
                                  <items>
                                     <FXCollections fx:factory="observableArrayList">
-                                       <Integer fx:value="2" />
                                        <Integer fx:value="3" />
                                        <Integer fx:value="4" />
                                        <Integer fx:value="5" />
@@ -173,7 +172,7 @@
                   <Insets left="5.0" right="5.0" />
                </VBox.margin>
             </TextArea>
-            <Label text="Progess">
+            <Label text="Progress">
                <VBox.margin>
                   <Insets bottom="5.0" top="10.0" />
                </VBox.margin>

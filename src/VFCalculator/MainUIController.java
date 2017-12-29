@@ -58,6 +58,9 @@ public class MainUIController {
     private final int ROW_HEADER = 0;
     private final int TOP_ATTRIBUTE = 1;
     private final int BOT_ATTRIBUTE = 2;
+    private final int TQACCESS = 1;
+    private final int BQACCESS = 2;
+    private final int OQACCESS = 3;
 
     private Boolean[] PKFlag = new Boolean[10];
 
@@ -213,10 +216,10 @@ public class MainUIController {
             if (PKFlag[currFlag])
                 PKs.add(currFlag);
         }
-        if (PKs.size() == 0) {
-            showMessageError("You must add Primary key");
-            return null;
-        }
+//        if (PKs.size() == 0) {
+//            showMessageError("You must add Primary key");
+//            return null;
+//        }
         return PKs;
     }
 
@@ -231,19 +234,19 @@ public class MainUIController {
 
     private int determineX(List<Integer> attrOrders) {
         int maxZ = calculateZ(attrOrders, 1);
-        int maxZPos = 0;
+        int maxZPos = 2;
 
         progTextArea.appendText("Z = " + maxZ + "\n");
 
-        //top attribute must not empty
-        for (int splitter = 2; splitter < attrOrders.size(); splitter++) {
-            int Z = calculateZ(attrOrders, splitter);
+        //top attribute must not be empty
+        for (int partition2Idx = 2; partition2Idx < attrOrders.size(); partition2Idx++) {
+            int Z = calculateZ(attrOrders, partition2Idx);
 
             progTextArea.appendText("Z = " + Z + "\n");
 
             if (Z > maxZ) {
                 maxZ = Z;
-                maxZPos = splitter;
+                maxZPos = partition2Idx;
             }
         }
 
@@ -254,15 +257,15 @@ public class MainUIController {
 
     private void showXPartition(List<Integer> attrOrders, int maxZPos) {
         progTextArea.appendText("Best Partition: {");
-        for (int i = 0; i < maxZPos - 1; i++) {
-            progTextArea.appendText("A" + (attrOrders.get(i)
+        for (int idxAttr = 0; idxAttr < maxZPos - 1; idxAttr++) {
+            progTextArea.appendText("A" + (attrOrders.get(idxAttr)
                     + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + ",");
         }
         progTextArea.appendText("A" + (attrOrders.get(maxZPos - 1)
                 + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + "} {");
 
-        for (int i = maxZPos; i < attrOrders.size() - 1; i++)  {
-            progTextArea.appendText("A" + (attrOrders.get(i)
+        for (int idxAttr = maxZPos; idxAttr < attrOrders.size() - 1; idxAttr++)  {
+            progTextArea.appendText("A" + (attrOrders.get(idxAttr)
                     + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + ",");
         }
         progTextArea.appendText("A" + (attrOrders.get(attrOrders.size() - 1)
@@ -297,18 +300,55 @@ public class MainUIController {
         int CTQ = getTotalTimeQueryAccessPartitionAttr(TQAccess);
         int CBQ = getTotalTimeQueryAccessPartitionAttr(BQAccess);
         int COQ = getTotalTimeQueryAccessPartitionAttr(OQAccess);
-        progTextArea.appendText("CTO =" + CTQ + "\n");
-        progTextArea.appendText("CBQ =" + CBQ + "\n");
-        progTextArea.appendText("COQ =" + COQ + "\n");
+
+        showCalculateZProgress(TQACCESS, TQAccess, CTQ);
+        showCalculateZProgress(BQACCESS, BQAccess, CBQ);
+        showCalculateZProgress(OQACCESS, OQAccess, COQ);
+
         return CTQ * CBQ - COQ * COQ;
+    }
+
+    private void showCalculateZProgress(int mode, List<Integer> queriesAccess, int totalQueriesVal) {
+        String msgQueriesAccess = "";
+        String msgQueriesVal = "";
+
+        switch (mode) {
+            case TQACCESS:
+                msgQueriesAccess += "TQ = ";
+                msgQueriesVal += "CTQ = ";
+                break;
+            case BQACCESS:
+                msgQueriesAccess += "BQ = ";
+                msgQueriesVal += "CBQ = ";
+                break;
+            case OQACCESS:
+                msgQueriesAccess += "OQ = ";
+                msgQueriesVal += "COQ = ";
+                break;
+        }
+
+        progTextArea.appendText(msgQueriesAccess);
+        if (queriesAccess.size() != 0)
+            showQueryAccess(queriesAccess);
+        else
+            progTextArea.appendText("None\n");
+        progTextArea.appendText(msgQueriesVal + Integer.toString(totalQueriesVal) + "\n");
+
+    }
+
+    private void showQueryAccess(List<Integer> queriesAccess) {
+        for (int queries : queriesAccess) {
+            progTextArea.appendText(" Q" + Integer.toString(queries + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + ",");
+        }
+        progTextArea.appendText("\n");
     }
 
     private int getTotalTimeQueryAccessPartitionAttr(List<Integer> queries) {
         int sum = 0;
-        for (int i = 0; i < queries.size(); i++) {
-            ObservableList<String> accessSite = accMatrix.get(queries.get(i));
-            for (int j = 1; j < accessSite.size(); j++) {
-                sum += Integer.parseInt(accessSite.get(j));
+        for (int query : queries) {
+            ObservableList<String> accessSite = accMatrix.get(query);
+            for (int idxSite = 1; idxSite < accessSite.size(); idxSite++) {
+                sum += Integer.parseInt(accessSite.get(idxSite));
             }
         }
         return sum;
@@ -403,9 +443,10 @@ public class MainUIController {
         int maxContVal = 0;
         int maxContPos = 0;
         for (int currAttr = 0; currAttr <= attrOrders.size(); currAttr++) {
-            int contVal = calculateCont(attrOrders, colInsert, currAttr);
 
-            showCAContProgress(attrOrders, colInsert, currAttr, contVal);
+            showCAContProgress(attrOrders, colInsert, currAttr);
+
+            int contVal = calculateCont(attrOrders, colInsert, currAttr);
 
             if (contVal > maxContVal) {
                 maxContVal = contVal;
@@ -423,7 +464,7 @@ public class MainUIController {
         progTextArea.appendText("A" + Integer.toString(attrOrders.get(attrOrders.size() - 1) + 1) + "\n");
     }
 
-    private void showCAContProgress(List<Integer> attrOrders, int colInsert, int currAttr, int contVal) {
+    private void showCAContProgress(List<Integer> attrOrders, int colInsert, int currAttr) {
         progTextArea.appendText("+ cont(");
         if (currAttr == 0)
             progTextArea.appendText("_");
@@ -434,22 +475,38 @@ public class MainUIController {
         progTextArea.appendText(" - A" + Integer.toString(colInsert + 1) + " - ");
 
         if (currAttr + 1 > attrOrders.size())
-            progTextArea.appendText("_) = " + Integer.toString(contVal) + "\n");
+            progTextArea.appendText("_) = ");
         else
             progTextArea.appendText("A" + Integer.toString(attrOrders.get(currAttr)
-                    + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + ") = " + Integer.toString(contVal) + "\n") ;
+                    + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + ") = ") ;
     }
 
     private int calculateCont(List<Integer> attrOrders, int colInsert, int beforePos) {
-        if (beforePos == 0)
-            return 2 * calculateBond(colInsert, attrOrders.get(beforePos));
+        if (beforePos == 0) {
+            int bondAfter = calculateBond(colInsert, attrOrders.get(beforePos));
 
-        if (beforePos == attrOrders.size())
-            return 2 * calculateBond(attrOrders.get(beforePos - 1), colInsert);
+            progTextArea.appendText("2 * " + Integer.toString(bondAfter) + " = " + Integer.toString(2 * bondAfter) + "\n");
 
-        return 2 * calculateBond(attrOrders.get(beforePos - 1), colInsert)
-                + 2 * calculateBond(colInsert, attrOrders.get(beforePos))
-                - 2 * calculateBond(attrOrders.get(beforePos - 1), attrOrders.get(beforePos));
+            return 2 * bondAfter;
+        }
+
+        if (beforePos == attrOrders.size()) {
+            int bondBefore = calculateBond(attrOrders.get(beforePos - 1), colInsert);
+
+            progTextArea.appendText("2 * " + Integer.toString(bondBefore) + " = " + Integer.toString(2 * bondBefore) + "\n");
+
+            return 2 * bondBefore;
+        }
+
+        int bondBefore = calculateBond(attrOrders.get(beforePos - 1), colInsert);
+        int bondAfter = calculateBond(colInsert, attrOrders.get(beforePos));
+        int bond2Side = calculateBond(attrOrders.get(beforePos - 1), attrOrders.get(beforePos));
+
+        progTextArea.appendText("2 * " + Integer.toString(bondBefore) + " + 2 * " + Integer.toString(bondAfter)
+                + " - 2 * " + Integer.toString(bond2Side) + " = "
+                + Integer.toString(2 * bondBefore + 2 * bondAfter - 2 * bond2Side) + "\n    ");
+
+        return 2 * bondBefore + 2 * bondAfter - 2 * bond2Side;
     }
 
     private int calculateBond(int firstPos, int lastPos) {
