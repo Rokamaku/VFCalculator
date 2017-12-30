@@ -11,6 +11,7 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.FlowPane;
 
+import javax.management.RuntimeOperationsException;
 import java.util.*;
 
 public class MainUIController {
@@ -22,6 +23,12 @@ public class MainUIController {
 
     @FXML
     private ComboBox<Integer> siteNumBox;
+
+    @FXML
+    private ComboBox<String> firstCombox;
+
+    @FXML
+    private ComboBox<String> secondCombox;
 
     @FXML
     private FlowPane PKFlowPane;
@@ -52,6 +59,11 @@ public class MainUIController {
     private int attrNum;
     private int appNum;
     private int siteNum;
+    private int firstAttr;
+    private int secondAttr;
+
+    private ObservableList<String> firstComboxAttr;
+    private ObservableList<String> secondComboxAttr;
 
     private final int DISTANCE_BETWEEN_COLUMN_AND_ROW = 1;
     private final int DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY = 1;
@@ -61,6 +73,9 @@ public class MainUIController {
     private final int TQACCESS = 1;
     private final int BQACCESS = 2;
     private final int OQACCESS = 3;
+    private final int FIRST_ATTR = 1;
+    private final int SECOND_ATTR = 2;
+    private final int START_COMBOX_VAL = 1;
 
     private Boolean[] PKFlag = new Boolean[10];
 
@@ -68,29 +83,63 @@ public class MainUIController {
     private void initialize() {
         Arrays.fill(PKFlag, false);
         progTextArea.setEditable(false);
+
+        firstComboxAttr = null;
+        secondComboxAttr = null;
+
     }
 
     @FXML
     private void handleAttrChangeVal() {
         attrNum = attrNumBox.getValue();
         createInputMatrix(UMTable, usageMatrix, attrNum, "A");
-        PKFlowPane.getChildren().clear();
+        createPrimaryBtn();
+        createIndexStartCASelection();
+    }
 
-        for (int i = 1; i <= attrNum; i++) {
+    private void createIndexStartCASelection() {
+        if (firstComboxAttr != null) {
+            firstComboxAttr.clear();
+            secondComboxAttr.clear();
+            createComboxItems();
+            return;
+        }
+        createComboxItems();
+
+    }
+
+    private void createComboxItems() {
+        firstComboxAttr = FXCollections.observableArrayList();
+        for (int idxAttr = 0; idxAttr < attrNum; idxAttr++) {
+            firstComboxAttr.add("A" + Integer.toString(idxAttr + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY));
+        }
+
+        secondComboxAttr = FXCollections.observableArrayList(firstComboxAttr);
+
+//        secondComboxAttr.remove(firstComboxAttr.get(0));
+//        firstComboxAttr.remove(secondComboxAttr.get(0));
+
+        firstCombox.setItems(firstComboxAttr);
+        firstCombox.setValue(firstComboxAttr.get(0));
+        secondCombox.setItems(secondComboxAttr);
+        secondCombox.setValue(secondComboxAttr.get(1));
+    }
+
+
+    private void createPrimaryBtn() {
+        PKFlowPane.getChildren().clear();
+        for (int idxAttr = 1; idxAttr <= attrNum; idxAttr++) {
             ToggleButton btn = new ToggleButton();
             btn.setPrefSize(40,30);
-            btn.setId(Integer.toString(i));
-            btn.setText("A" + Integer.toString(i));
+            btn.setId(Integer.toString(idxAttr));
+            btn.setText("A" + Integer.toString(idxAttr));
             btn.setOnAction((ActionEvent e) -> {
-                if (btn.isSelected()) {
-                    PKFlag[Integer.parseInt(btn.getId()) - 1] = true;
-                }
-                else
-                    PKFlag[Integer.parseInt(btn.getId()) - 1] = false;
+                PKFlag[Integer.parseInt(btn.getId()) - 1] = btn.isSelected();
             });
             PKFlowPane.getChildren().add(btn);
         }
     }
+
 
     @FXML
     private void handleAppChangeVal() {
@@ -118,12 +167,11 @@ public class MainUIController {
         table.getFocusModel().focusedCellProperty().addListener(
                 (ObservableValue<? extends TablePosition> observable, TablePosition oldValue, TablePosition newValue ) ->
                 {
-                    if ( newValue != null )
-                    {
-                        Platform.runLater( () ->
+                    if ( newValue != null ) {
+                        Platform.runLater(() ->
                         {
-                            table.edit( newValue.getRow(), newValue.getTableColumn() );
-                        } );
+                            table.edit(newValue.getRow(), newValue.getTableColumn());
+                        });
                     }
                 }
         );
@@ -157,6 +205,7 @@ public class MainUIController {
                         (t.getTableView().getItems().get(t.getTablePosition().getRow()))
                             .set(idx, t.getNewValue())
             );
+
             table.getColumns().add(col);
 
         }
@@ -173,12 +222,27 @@ public class MainUIController {
         VFTextArea.clear();
 
         List<Integer> PKs = determinePKs();
-        if (PKs == null)
+        if (!getAttrCAIntialize())
             return;
+//        if (PKs == null)
+//            return;
+
 
         calculateAAMatrix();
         List<Integer> attrOrders = calculateCAMatrix();
         calculateVF(attrOrders, PKs);
+
+    }
+
+    private boolean getAttrCAIntialize() {
+        firstAttr = parseAttrCombox(FIRST_ATTR);
+        secondAttr = parseAttrCombox(SECOND_ATTR);
+
+        if (firstAttr == secondAttr) {
+            showMessageError("Two attributes must be different");
+            return false;
+        }
+        return true;
     }
 
 
@@ -200,8 +264,7 @@ public class MainUIController {
     }
 
     private Set<Integer> createAFragment(int xPos, List<Integer> pKs, List<Integer> attrOrders, int mode) {
-        Set<Integer> aFragment = new HashSet<>();
-        aFragment.addAll(pKs);
+        Set<Integer> aFragment = new HashSet<>(pKs);
         if (mode == TOP_ATTRIBUTE) {
             aFragment.addAll(attrOrders.subList(0, xPos));
         } else if (mode == BOT_ATTRIBUTE) {
@@ -382,7 +445,7 @@ public class MainUIController {
         return queriesAccess;
     }
 
-    private List<Integer> calculateCAMatrix() {
+    private List<Integer> calculateCAMatrix() throws RuntimeException {
         progTextArea.appendText("\n********Calculate CA Matrix********\n");
         List<Integer> attrOrders = determineAttrOrder();
         createCAMatrixData(attrOrders);
@@ -412,31 +475,62 @@ public class MainUIController {
 
     private void createCAMatrixData(List<Integer> attrOrders) {
         caMatrix.clear();
-        for (int i = 0; i < attrNum; i++) {
-            int posRow = attrOrders.get(i);
+        for (int idxAttrRow = 0; idxAttrRow < attrNum; idxAttrRow++) {
+            int posRow = attrOrders.get(idxAttrRow);
             ObservableList<String> aRow = FXCollections.observableArrayList();
             aRow.add("A" + Integer.toString(posRow + 1));
 
-            for (int j = 0; j < attrNum; j++) {
-                int posCol = attrOrders.get(j);
+            for (int idxAttrCol = 0; idxAttrCol < attrNum; idxAttrCol++) {
+                int posCol = attrOrders.get(idxAttrCol);
                 aRow.add(aaMatrix.get(posRow).get(posCol + 1));
             }
             caMatrix.add(aRow);
         }
     }
 
-    private List<Integer> determineAttrOrder() {
+    private List<Integer> determineAttrOrder() throws RuntimeException {
         List<Integer> attrOrders = new ArrayList<>();
-        progTextArea.appendText("Determine: A1, A2\n");
-        attrOrders.add(0);
-        attrOrders.add(1);
-        for (int i = 2; i < aaMatrix.size(); i++) {
-            progTextArea.appendText("Determine position for A" + Integer.toString(i + 1) + "\n");
-            int bestPos = determineBestPos2Add(attrOrders, i);
-            attrOrders.add(bestPos, i);
+        List<Integer> attrList = new ArrayList<>();
+
+        for (int idxAttr = 0; idxAttr < aaMatrix.size(); idxAttr++)
+            attrList.add(idxAttr);
+
+
+        attrOrders.add(firstAttr);
+        attrList.remove((Integer) firstAttr);
+
+
+        attrOrders.add(secondAttr);
+        attrList.remove((Integer) secondAttr);
+
+
+        progTextArea.appendText(String.format("Determine A%d, A%d\n", firstAttr + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY,
+                secondAttr + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY));
+
+        for (int attr : attrList) {
+            progTextArea.appendText("Determine position for A"
+                    + Integer.toString(attr + DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY) + "\n");
+            int bestPos = determineBestPos2Add(attrOrders, attr);
+            attrOrders.add(bestPos, attr);
             showCADetermineProgress(attrOrders);
         }
         return attrOrders;
+    }
+
+    private int parseAttrCombox(int mode) {
+        int attribute = -1;
+        String combBoxStr;
+        switch (mode) {
+            case FIRST_ATTR:
+                combBoxStr = firstCombox.getValue();
+                attribute = Integer.parseInt(combBoxStr.substring(START_COMBOX_VAL));
+                break;
+            case SECOND_ATTR:
+                combBoxStr = secondCombox.getValue();
+                attribute = Integer.parseInt(combBoxStr.substring(START_COMBOX_VAL));
+                break;
+        }
+        return attribute - DISTANCE_BETWEEN_INTERNAL_INDEX_AND_DISPLAY;
     }
 
     private int determineBestPos2Add(List<Integer> attrOrders, int colInsert) {
